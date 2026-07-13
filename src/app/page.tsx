@@ -9,6 +9,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Difficulty, SkillNode, SkillNodeStatus } from "./types/SkillNode";
+import UpdaterNode from "./flow/nodes/UpdaterNode";
 
 const nodeStructures: SkillNode[] = [
   {
@@ -26,7 +27,7 @@ const nodeStructures: SkillNode[] = [
     id: "n2",
     title: "Hooks",
     description: "Learn the React Hooks",
-    status: SkillNodeStatus.PENDING,
+    status: SkillNodeStatus.IN_PROGRESS,
     category: "Tech",
     difficulty: Difficulty.NORMAL,
     dependsOn: ["n1"],
@@ -37,7 +38,7 @@ const nodeStructures: SkillNode[] = [
     id: "n3",
     title: "Events",
     description: "Learn the React Events",
-    status: SkillNodeStatus.PENDING,
+    status: SkillNodeStatus.FINISHED,
     category: "Tech",
     difficulty: Difficulty.NORMAL,
     dependsOn: ["n2"],
@@ -50,11 +51,21 @@ const initialNodes = getNodes(nodeStructures);
 
 const initialEdges = getEdges(nodeStructures);
 
+const nodeTypes = {
+  updaterNode: UpdaterNode,
+};
+
 function getNodes(nodes: SkillNode[]) {
   return nodes.map((node) => ({
     id: node.id,
+    type: "updaterNode",
     position: { x: node.x, y: node.y },
-    data: { label: node.title },
+    data: {
+      status: node.status,
+      title: node.title,
+      category: node.category,
+      difficulty: node.difficulty,
+    },
   }));
 }
 function getEdges(nodes: SkillNode[]) {
@@ -91,6 +102,7 @@ export default function Home() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
