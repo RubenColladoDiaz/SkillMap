@@ -4,6 +4,7 @@ import { Handle, Position } from "@xyflow/react";
 type Props = {
   status: SkillNodeStatus;
   title: string;
+  description: string;
   category: string;
   difficulty: Difficulty;
 };
@@ -17,20 +18,14 @@ const statusStyles = {
 export default function SkillNodeCard({ data }: { data: Props }) {
   return (
     <div
-      className={`min-w-[180px] rounded-xl border-2 px-4 py-3 shadow-lg ${statusStyles[data.status]}`}
+      className={`min-w-[180px] max-w-[220px] rounded-xl border-2 px-4 py-3 shadow-lg ${statusStyles[data.status]}`}
     >
       <Handle type="target" position={Position.Top} className="!bg-slate-300" />
 
       <p className="text-sm font-semibold text-white">{data.title}</p>
-
-      <div className="mt-2 flex gap-1">
-        <span className="rounded-full bg-slate-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
-          {data.category}
-        </span>
-        <span className="rounded-full bg-slate-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
-          {data.difficulty}
-        </span>
-      </div>
+      <p className="mt-1 text-xs text-slate-400 line-clamp-2">
+        {data.description}
+      </p>
 
       <Handle
         type="source"

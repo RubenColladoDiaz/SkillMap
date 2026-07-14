@@ -6,10 +6,12 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
+  NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Difficulty, SkillNode, SkillNodeStatus } from "./types/SkillNode";
 import UpdaterNode from "./flow/nodes/UpdaterNode";
+import EditNode from "./components/nodes/EditNode";
 
 const nodeStructures: SkillNode[] = [
   {
@@ -18,7 +20,7 @@ const nodeStructures: SkillNode[] = [
     description: "Learn the basics",
     status: SkillNodeStatus.PENDING,
     category: "Tech",
-    difficulty: Difficulty.NORMAL,
+    difficulty: Difficulty.EASY,
     dependsOn: [],
     x: 0,
     y: 180,
@@ -40,7 +42,7 @@ const nodeStructures: SkillNode[] = [
     description: "Learn the React Events",
     status: SkillNodeStatus.FINISHED,
     category: "Tech",
-    difficulty: Difficulty.NORMAL,
+    difficulty: Difficulty.HARD,
     dependsOn: ["n2"],
     x: 100,
     y: 380,
@@ -48,7 +50,6 @@ const nodeStructures: SkillNode[] = [
 ];
 
 const initialNodes = getNodes(nodeStructures);
-
 const initialEdges = getEdges(nodeStructures);
 
 const nodeTypes = {
@@ -63,6 +64,7 @@ function getNodes(nodes: SkillNode[]) {
     data: {
       status: node.status,
       title: node.title,
+      description: node.description,
       category: node.category,
       difficulty: node.difficulty,
     },
@@ -81,6 +83,7 @@ function getEdges(nodes: SkillNode[]) {
 export default function Home() {
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const onNodesChange = useCallback(
     (changes) =>
@@ -96,14 +99,34 @@ export default function Home() {
     (params) => setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
     [],
   );
+  const onNodeClick: NodeMouseHandler = (event, node) => {
+    setSelectedNodeId(node.id);
+  };
+
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+
+  const onCloseEditPanel = () => setSelectedNodeId(null);
+
+  const onSaveEditPanel = (
+    id: string,
+    data: { title: string; description: string },
+  ) => {};
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      {selectedNodeId !== null && (
+        <EditNode
+          node={selectedNode}
+          onCloseEditPanel={onCloseEditPanel}
+          onSaveEditPanel={onSaveEditPanel}
+        ></EditNode>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodeClick={onNodeClick}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         fitView
