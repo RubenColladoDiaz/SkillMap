@@ -1,5 +1,5 @@
 import { Difficulty, SkillNodeStatus } from "@/app/types/SkillNode";
-import { FormEvent, RefObject, useRef } from "react";
+import { FormEvent, useEffect, useRef } from "react";
 
 type Props = {
   id: string;
@@ -23,11 +23,20 @@ export default function EditNode({
   onCloseEditPanel: () => void;
   onSaveEditPanel: (
     id: string,
-    data: { title: string; description: string },
+    data: {
+      title: string;
+      description: string;
+      category: string;
+      status: SkillNodeStatus;
+      difficulty: Difficulty;
+    },
   ) => void;
 }) {
   const titleRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const catRef = useRef<HTMLInputElement>(null);
+  const statusRef = useRef<HTMLSelectElement>(null);
+  const diffRef = useRef<HTMLSelectElement>(null);
 
   function onSubmit(event: FormEvent) {
     if (!node) return;
@@ -36,8 +45,14 @@ export default function EditNode({
     const formValues = {
       title: titleRef.current?.value ?? "",
       description: descRef.current?.value ?? "",
+      category: catRef.current?.value ?? "",
+      status:
+        (statusRef.current?.value as SkillNodeStatus) ??
+        SkillNodeStatus.PENDING,
+      difficulty: (diffRef.current?.value as Difficulty) ?? Difficulty.NORMAL,
     };
     onSaveEditPanel(node?.id, formValues);
+    onCloseEditPanel();
   }
 
   return (
@@ -53,17 +68,6 @@ export default function EditNode({
           </button>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-300">
-            {node?.data.category}
-          </span>
-          <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-medium uppercase tracking-wide text-slate-300">
-            {node?.data.difficulty}
-          </span>
-          <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-400">
-            {node?.data.status}
-          </span>
-        </div>
         <form onSubmit={onSubmit}>
           <div className="mt-6 space-y-4">
             <div>
@@ -89,15 +93,76 @@ export default function EditNode({
                 className="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
               />
             </div>
-          </div>
 
+            <div>
+              <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                Categoría
+              </label>
+              <input
+                type="text"
+                ref={catRef}
+                defaultValue={node?.data.category}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                  Estado
+                </label>
+                <select
+                  defaultValue={node?.data.status}
+                  ref={statusRef}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                >
+                  {Object.values(SkillNodeStatus).map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+                  Dificultad
+                </label>
+                <select
+                  defaultValue={node?.data.difficulty}
+                  ref={diffRef}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white focus:border-emerald-400 focus:outline-none"
+                >
+                  {Object.values(Difficulty).map((difficulty) => (
+                    <option key={difficulty} value={difficulty}>
+                      {difficulty}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
           <div className="mt-6 border-t border-slate-800 pt-4">
             <p className="text-xs uppercase tracking-wide text-slate-500">
               ID del nodo
             </p>
             <p className="text-sm text-slate-400">{node?.id}</p>
           </div>
-          <button type="submit">Guardar</button>
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onCloseEditPanel}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-emerald-400"
+            >
+              Guardar
+            </button>
+          </div>{" "}
         </form>
       </div>
     </div>
