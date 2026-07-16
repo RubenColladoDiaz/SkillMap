@@ -13,6 +13,7 @@ import "@xyflow/react/dist/style.css";
 import { Difficulty, SkillNode, SkillNodeStatus } from "../types/SkillNode";
 import UpdaterNode from "../flow/nodes/UpdaterNode";
 import EditNode from "../components/nodes/EditNode";
+import ProgressBar from "../components/ProgressBar";
 
 const nodeStructures: SkillNode[] = [
   {
@@ -98,6 +99,17 @@ export default function Canvas() {
   const [nodeIdToDelete, setNodeIdToDelete] = useState<string | null>(null);
 
   const [hasLoaded, setHasLoaded] = useState(false);
+
+  function getProgress() {
+    if (nodes.length <= 0) return 0;
+
+    const completedCount = nodes.filter(
+      (node) => node.data.status === SkillNodeStatus.FINISHED,
+    ).length;
+    return (completedCount / nodes.length) * 100;
+  }
+
+  const progressPercentage = getProgress();
 
   useEffect(() => {
     if (localStorage.getItem("nodes") !== null) {
@@ -241,6 +253,7 @@ export default function Canvas() {
           </button>
         </div>
       )}
+      <ProgressBar percentage={progressPercentage}></ProgressBar>
       <ReactFlow
         nodes={nodes}
         edges={edges}
