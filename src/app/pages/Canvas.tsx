@@ -95,6 +95,7 @@ export default function Canvas() {
     x: number;
     y: number;
   } | null>(null);
+  const [nodeIdToDelete, setNodeIdToDelete] = useState<string | null>(null);
 
   const [hasLoaded, setHasLoaded] = useState(false);
 
@@ -129,6 +130,7 @@ export default function Canvas() {
   );
   const onNodeClick: NodeMouseHandler = (event, node) => {
     setSelectedNodeId(node.id);
+    setContextualMenuPosition(null);
   };
   const onPaneContextMenu = useCallback(
     (event) => {
@@ -139,9 +141,18 @@ export default function Canvas() {
         y: event.clientY,
       });
       setFlowPosition(flowPosition);
+      setNodeIdToDelete(null);
     },
     [screenToFlowPosition],
   );
+  const onPaneClick = useCallback(() => {
+    setContextualMenuPosition(null);
+  }, []);
+  const onNodeContextMenu = useCallback((event, node) => {
+    event.preventDefault();
+    setContextualMenuPosition({ x: event.clientX, y: event.clientY });
+    setNodeIdToDelete(node.id);
+  }, []);
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
 
@@ -172,18 +183,36 @@ export default function Canvas() {
   }, [nodes, edges, hasLoaded]);
 
   function createNode() {
+    if (!flowPosition) return;
+
     const uniqueId = crypto.randomUUID();
-    const newNode: SkillNode = {
+    const newNode = {
       id: uniqueId,
-      title: "Sin titulo",
-      description: "",
-      status: SkillNodeStatus.PENDING,
-      category: "",
-      difficulty: Difficulty.NORMAL,
-      x: 0,
-      y: 0,
-      dependsOn: [],
+      data: {
+        title: "Sin titulo",
+        description: "",
+        category: "",
+        status: SkillNodeStatus.PENDING,
+        difficulty: Difficulty.NORMAL,
+      },
+      position: flowPosition,
+      type: "updaterNode",
     };
+    setNodes((nodes) => [...nodes, newNode]);
+    setContextualMenuPosition(null);
+    setSelectedNodeId(uniqueId);
+  }
+  function deleteNode() {
+    setNodes((currentNodes) =>
+      currentNodes.filter((node) => node.id !== nodeIdToDelete),
+    );
+    setEdges((currentEdges) =>
+      currentEdges.filter(
+        (edge) =>
+          edge.target !== nodeIdToDelete && edge.source !== nodeIdToDelete,
+      ),
+    );
+    setContextualMenuPosition(null);
   }
 
   return (
@@ -204,8 +233,11 @@ export default function Canvas() {
           }}
           className="z-50 rounded-lg border border-slate-700 bg-slate-900 p-1 shadow-xl"
         >
-          <button className="rounded-md px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800">
-            Crear nodo
+          <button
+            onClick={nodeIdToDelete !== null ? deleteNode : createNode}
+            className="rounded-md px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
+          >
+            {nodeIdToDelete !== null ? "Eliminar" : "Crear nodo"}
           </button>
         </div>
       )}
@@ -215,9 +247,11 @@ export default function Canvas() {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onNodeClick={onNodeClick}
+        onNodeContextMenu={onNodeContextMenu}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneContextMenu={onPaneContextMenu}
+        onPaneClick={onPaneClick}
         fitView
       />
     </div>
