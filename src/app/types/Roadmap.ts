@@ -1,8 +1,9 @@
-import { SkillNode } from "./SkillNode";
+import type { Node, Edge } from "@xyflow/react";
 
 export type Roadmap = {
-  id: number;
-  nodes: SkillNode[];
+  id: string;
   name: string;
   description: string;
+  nodes: Node[];
+  edges: Edge[];
 };

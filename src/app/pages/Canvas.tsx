@@ -14,6 +14,7 @@ import { Difficulty, SkillNode, SkillNodeStatus } from "../types/SkillNode";
 import UpdaterNode from "../flow/nodes/UpdaterNode";
 import EditNode from "../components/nodes/EditNode";
 import ProgressBar from "../components/ProgressBar";
+import { Roadmap } from "../types/Roadmap";
 
 const nodeStructures: SkillNode[] = [
   {
@@ -82,7 +83,7 @@ function getEdges(nodes: SkillNode[]) {
   );
 }
 
-export default function Canvas() {
+export default function Canvas({ roadmapId }: { roadmapId: string }) {
   const { screenToFlowPosition } = useReactFlow();
 
   const [nodes, setNodes] = useState(() => initialNodes);
@@ -111,20 +112,22 @@ export default function Canvas() {
 
   const progressPercentage = getProgress();
 
+  // Efecto de carga
   useEffect(() => {
-    if (localStorage.getItem("nodes") !== null) {
-      setNodes(JSON.parse(localStorage.getItem("nodes") ?? ""));
-    } else {
-      setNodes(initialNodes);
-    }
-
-    if (localStorage.getItem("edges") !== null) {
-      setEdges(JSON.parse(localStorage.getItem("edges") ?? ""));
-    } else {
-      setEdges(initialEdges);
+    if (localStorage.getItem("roadmaps") !== null) {
+      const roadmaps: Roadmap[] = JSON.parse(
+        localStorage.getItem("roadmaps") ?? "",
+      );
+      const actualRoadmap = roadmaps.find(
+        (roadmap) => roadmap.id === roadmapId,
+      );
+      if (actualRoadmap) {
+        setNodes(actualRoadmap.nodes);
+        setEdges(actualRoadmap.edges);
+      }
     }
     setHasLoaded(true);
-  }, []);
+  }, [roadmapId]);
 
   const onNodesChange = useCallback(
     (changes) =>
@@ -187,12 +190,22 @@ export default function Canvas() {
     );
   };
 
+  // Efecto de guardado
   useEffect(() => {
     if (!hasLoaded) return;
 
-    localStorage.setItem("nodes", JSON.stringify(nodes));
-    localStorage.setItem("edges", JSON.stringify(edges));
-  }, [nodes, edges, hasLoaded]);
+    if (localStorage.getItem("roadmaps") !== null) {
+      const roadmaps: Roadmap[] = JSON.parse(
+        localStorage.getItem("roadmaps") ?? "",
+      );
+      const updatedRoadmaps = roadmaps.map((roadmap) =>
+        roadmap.id === roadmapId
+          ? { ...roadmap, nodes: nodes, edges: edges }
+          : roadmap,
+      );
+      localStorage.setItem("roadmaps", JSON.stringify(updatedRoadmaps));
+    }
+  }, [edges, hasLoaded, nodes, roadmapId]);
 
   function createNode() {
     if (!flowPosition) return;
