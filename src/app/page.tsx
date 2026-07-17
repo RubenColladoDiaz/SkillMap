@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Roadmap } from "./types/Roadmap";
+import EditRoadmap from "./components/roadmaps/EditRoadmap";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 export default function Dashboard() {
   const router = useRouter();
 
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
+  const [selectedRoadmapId, setSelectedRoadmapId] = useState<string | null>(
+    null,
+  );
+  const [isCreatePanelOpen, setIsCreatePanelOpen] = useState<boolean>(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
     if (localStorage.getItem("roadmaps") !== null) {
@@ -19,19 +24,52 @@ export default function Dashboard() {
     }
   }, []);
 
-  function createRoadmap() {
-    const uniqueId = crypto.randomUUID();
-    const newRoadmap: Roadmap = {
-      id: uniqueId,
-      name: "Nuevo Roadmap",
-      description: "",
-      nodes: [],
-      edges: [],
-    };
-    const updatedRoadmaps = [...roadmaps, newRoadmap];
-    setRoadmaps(updatedRoadmaps);
-    localStorage.setItem("roadmaps", JSON.stringify(updatedRoadmaps));
-    router.push("/roadmaps/" + uniqueId);
+  function openCreatingPanel() {
+    setIsCreatePanelOpen(true);
+  }
+  const openEditPanel = useCallback((event, roadmap: Roadmap) => {
+    event.stopPropagation();
+    setSelectedRoadmapId(roadmap.id);
+  }, []);
+
+  const selectedRoadmap: Roadmap | undefined = roadmaps.find(
+    (roadmap) => roadmap.id === selectedRoadmapId,
+  );
+
+  useEffect(() => {
+    if (!hasLoaded) return;
+    localStorage.setItem("roadmaps", JSON.stringify(roadmaps));
+  }, [roadmaps, hasLoaded]);
+
+  function onSave() {
+    if (isCreatePanelOpen) {
+      const uniqueId = crypto.randomUUID();
+      const newRoadmap: Roadmap = {
+        id: uniqueId,
+        name: "",
+        description: "",
+        nodes: [],
+        edges: [],
+      };
+      setRoadmaps((currentRoadmaps) => [...currentRoadmaps, newRoadmap]);
+      setIsCreatePanelOpen(false);
+      router.push("/roadmaps/" + newRoadmap.id);
+    }
+    if (selectedRoadmapId !== null) {
+      setRoadmaps((currentRoadmaps) =>
+        currentRoadmaps.map((roadmap) =>
+          roadmap.id === selectedRoadmapId
+            ? { ...roadmap, name: "", description: "" }
+            : roadmap,
+        ),
+      );
+      setSelectedRoadmapId(null);
+    }
+  }
+
+  function onClose() {
+    setSelectedRoadmapId(null);
+    setIsCreatePanelOpen(false);
   }
 
   return (
@@ -40,12 +78,20 @@ export default function Dashboard() {
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">Mis Roadmaps</h1>
           <button
-            onClick={createRoadmap}
+            onClick={openCreatingPanel}
             className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-emerald-400"
           >
             Crear Roadmap
           </button>
         </div>
+
+        {(selectedRoadmapId !== null || isCreatePanelOpen === true) && (
+          <EditRoadmap
+            roadmap={selectedRoadmap}
+            onSave={onSave}
+            onClose={onClose}
+          ></EditRoadmap>
+        )}
 
         {roadmaps.length === 0 ? (
           <p className="text-sm text-slate-500">
@@ -54,16 +100,22 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {roadmaps.map((roadmap) => (
-              <Link
+              <div
                 key={roadmap.id}
-                href={`/roadmaps/${roadmap.id}`}
-                className="rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-lg transition hover:border-emerald-400 hover:shadow-emerald-500/10"
+                onClick={() => router.push(`/roadmaps/${roadmap.id}`)}
+                className="relative cursor-pointer rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-lg transition hover:border-emerald-400 hover:shadow-emerald-500/10"
               >
-                <p className="font-semibold text-white">{roadmap.name}</p>
+                <button
+                  onClick={(event) => openEditPanel(event, roadmap)}
+                  className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-slate-800 hover:text-white"
+                >
+                  ⋮
+                </button>
+                <p className="pr-6 font-semibold text-white">{roadmap.name}</p>
                 <p className="mt-1 text-xs text-slate-500">
                   {roadmap.nodes.length} nodos
                 </p>
-              </Link>
+              </div>
             ))}
           </div>
         )}
