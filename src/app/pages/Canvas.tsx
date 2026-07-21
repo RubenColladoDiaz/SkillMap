@@ -15,6 +15,7 @@ import UpdaterNode from "../flow/nodes/UpdaterNode";
 import EditNode from "../components/nodes/EditNode";
 import ProgressBar from "../components/ProgressBar";
 import { Roadmap } from "../types/Roadmap";
+import Link from "next/link";
 
 const nodeStructures: SkillNode[] = [
   {
@@ -242,6 +243,12 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
+      <Link
+        href="/"
+        className="fixed top-4 left-4 z-40 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
+      >
+        ← Volver
+      </Link>
       {selectedNodeId !== null && (
         <EditNode
           node={selectedNode}
