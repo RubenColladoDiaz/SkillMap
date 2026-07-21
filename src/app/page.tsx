@@ -31,10 +31,17 @@ export default function Dashboard() {
   function openCreatingPanel() {
     setIsCreatePanelOpen(true);
   }
-  const openEditPanel = useCallback((event, roadmap: Roadmap) => {
-    event.stopPropagation();
-    setSelectedRoadmapId(roadmap.id);
-  }, []);
+  const toggleRoadmapMenu = useCallback(
+    (event, roadmap: Roadmap) => {
+      event.stopPropagation();
+      if (openMenuRoadmapId === roadmap.id) {
+        setOpenMenuRoadmapId(null);
+      } else {
+        setOpenMenuRoadmapId(roadmap.id);
+      }
+    },
+    [openMenuRoadmapId],
+  );
 
   const selectedRoadmap: Roadmap | undefined = roadmaps.find(
     (roadmap) => roadmap.id === selectedRoadmapId,
@@ -76,8 +83,27 @@ export default function Dashboard() {
     setIsCreatePanelOpen(false);
   }
 
+  const editRoadmap = useCallback((event, roadmap: Roadmap) => {
+    event.stopPropagation();
+    setSelectedRoadmapId(roadmap.id);
+    setOpenMenuRoadmapId(null);
+  }, []);
+
+  const deleteRoadmap = useCallback((event, roadmap: Roadmap) => {
+    event.stopPropagation();
+    setRoadmaps((currentRoadmaps) =>
+      currentRoadmaps.filter(
+        (currentRoadmap) => currentRoadmap.id !== roadmap.id,
+      ),
+    );
+    setOpenMenuRoadmapId(null);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-slate-950 p-8">
+    <div
+      onClick={() => setOpenMenuRoadmapId(null)}
+      className="min-h-screen bg-slate-950 p-8"
+    >
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">Mis Roadmaps</h1>
@@ -110,11 +136,27 @@ export default function Dashboard() {
                 className="relative cursor-pointer rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-lg transition hover:border-emerald-400 hover:shadow-emerald-500/10"
               >
                 <button
-                  onClick={(event) => openEditPanel(event, roadmap)}
+                  onClick={(event) => toggleRoadmapMenu(event, roadmap)}
                   className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-slate-800 hover:text-white"
                 >
                   ⋮
                 </button>
+                {openMenuRoadmapId === roadmap.id && (
+                  <div className="absolute top-10 right-3 z-10 w-32 rounded-lg border border-slate-700 bg-slate-800 p-1 shadow-xl">
+                    <button
+                      onClick={(event) => editRoadmap(event, roadmap)}
+                      className="w-full rounded-md px-3 py-1.5 text-left text-sm text-slate-200 hover:bg-slate-700"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={(event) => deleteRoadmap(event, roadmap)}
+                      className="w-full rounded-md px-3 py-1.5 text-left text-sm text-red-400 hover:bg-slate-700"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                )}
                 <p className="pr-6 font-semibold text-white">{roadmap.name}</p>
                 <p className="mt-1 text-xs text-slate-400 line-clamp-2">
                   {roadmap.description}
