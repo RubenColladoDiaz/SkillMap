@@ -14,6 +14,9 @@ export default function Dashboard() {
   );
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState<boolean>(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [openMenuRoadmapId, setOpenMenuRoadmapId] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     if (localStorage.getItem("roadmaps") !== null) {
@@ -22,6 +25,7 @@ export default function Dashboard() {
       );
       setRoadmaps(roadmaps);
     }
+    setHasLoaded(true);
   }, []);
 
   function openCreatingPanel() {
@@ -41,13 +45,13 @@ export default function Dashboard() {
     localStorage.setItem("roadmaps", JSON.stringify(roadmaps));
   }, [roadmaps, hasLoaded]);
 
-  function onSave() {
+  function onSave(data: { name: string; description: string }) {
     if (isCreatePanelOpen) {
       const uniqueId = crypto.randomUUID();
       const newRoadmap: Roadmap = {
         id: uniqueId,
-        name: "",
-        description: "",
+        name: data.name,
+        description: data.description,
         nodes: [],
         edges: [],
       };
@@ -59,7 +63,7 @@ export default function Dashboard() {
       setRoadmaps((currentRoadmaps) =>
         currentRoadmaps.map((roadmap) =>
           roadmap.id === selectedRoadmapId
-            ? { ...roadmap, name: "", description: "" }
+            ? { ...roadmap, name: data.name, description: data.description }
             : roadmap,
         ),
       );
@@ -112,7 +116,10 @@ export default function Dashboard() {
                   ⋮
                 </button>
                 <p className="pr-6 font-semibold text-white">{roadmap.name}</p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-400 line-clamp-2">
+                  {roadmap.description}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
                   {roadmap.nodes.length} nodos
                 </p>
               </div>
