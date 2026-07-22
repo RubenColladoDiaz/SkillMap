@@ -4,9 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Roadmap } from "./types/Roadmap";
 import EditRoadmap from "./components/roadmaps/EditRoadmap";
 import { useRouter } from "next/navigation";
+import { createClient } from "../../utils/supabase/client";
 
 export default function Dashboard() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<string | null>(
@@ -99,6 +101,11 @@ export default function Dashboard() {
     setOpenMenuRoadmapId(null);
   }, []);
 
+  async function onSignOut() {
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
+
   return (
     <div
       onClick={() => setOpenMenuRoadmapId(null)}
@@ -107,12 +114,20 @@ export default function Dashboard() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">Mis Roadmaps</h1>
-          <button
-            onClick={openCreatingPanel}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-emerald-400"
-          >
-            Crear Roadmap
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={openCreatingPanel}
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-emerald-400"
+            >
+              Crear Roadmap
+            </button>
+            <button
+              onClick={onSignOut}
+              className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         {(selectedRoadmapId !== null || isCreatePanelOpen === true) && (
