@@ -6,4 +6,5 @@ export type Roadmap = {
   description: string;
   nodes: Node[];
   edges: Edge[];
+  SkillNode: { count: number }[]; // Para mostrar el contador de nodos creados en el roadmap
 };

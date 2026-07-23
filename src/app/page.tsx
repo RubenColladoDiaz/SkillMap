@@ -15,19 +15,25 @@ export default function Dashboard() {
     null,
   );
   const [isCreatePanelOpen, setIsCreatePanelOpen] = useState<boolean>(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
   const [openMenuRoadmapId, setOpenMenuRoadmapId] = useState<string | null>(
     null,
   );
 
-  useEffect(() => {
-    if (localStorage.getItem("roadmaps") !== null) {
-      const roadmaps: Roadmap[] = JSON.parse(
-        localStorage.getItem("roadmaps") ?? "",
-      );
-      setRoadmaps(roadmaps);
+  async function getRoadmaps() {
+    const { data, error } = await supabase
+      .from("Roadmap")
+      .select("*, SkillNode(count)");
+
+    if (error) {
+      console.error(error);
+      return;
     }
-    setHasLoaded(true);
+
+    setRoadmaps(data);
+  }
+
+  useEffect(() => {
+    getRoadmaps();
   }, []);
 
   function openCreatingPanel() {
@@ -49,33 +55,35 @@ export default function Dashboard() {
     (roadmap) => roadmap.id === selectedRoadmapId,
   );
 
-  useEffect(() => {
-    if (!hasLoaded) return;
-    localStorage.setItem("roadmaps", JSON.stringify(roadmaps));
-  }, [roadmaps, hasLoaded]);
-
-  function onSave(data: { name: string; description: string }) {
+  async function onSave(data: { name: string; description: string }) {
     if (isCreatePanelOpen) {
-      const uniqueId = crypto.randomUUID();
-      const newRoadmap: Roadmap = {
-        id: uniqueId,
-        name: data.name,
-        description: data.description,
-        nodes: [],
-        edges: [],
-      };
-      setRoadmaps((currentRoadmaps) => [...currentRoadmaps, newRoadmap]);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const { data: insertedRoadmap, error } = await supabase
+        .from("Roadmap")
+        .insert({
+          name: data.name,
+          description: data.description,
+          user_id: user?.id,
+        })
+        .select()
+        .single();
+      if (error || !insertedRoadmap) {
+        console.error(error);
+        return;
+      }
       setIsCreatePanelOpen(false);
-      router.push("/roadmaps/" + newRoadmap.id);
+      router.push("/roadmaps/" + insertedRoadmap.id);
     }
     if (selectedRoadmapId !== null) {
-      setRoadmaps((currentRoadmaps) =>
-        currentRoadmaps.map((roadmap) =>
-          roadmap.id === selectedRoadmapId
-            ? { ...roadmap, name: data.name, description: data.description }
-            : roadmap,
-        ),
-      );
+      await supabase
+        .from("Roadmap")
+        .update({ name: data.name, description: data.description })
+        .eq("id", selectedRoadmapId);
+
+      getRoadmaps();
       setSelectedRoadmapId(null);
     }
   }
@@ -91,14 +99,21 @@ export default function Dashboard() {
     setOpenMenuRoadmapId(null);
   }, []);
 
-  const deleteRoadmap = useCallback((event, roadmap: Roadmap) => {
+  const deleteRoadmap = useCallback(async (event, roadmap: Roadmap) => {
     event.stopPropagation();
-    setRoadmaps((currentRoadmaps) =>
-      currentRoadmaps.filter(
-        (currentRoadmap) => currentRoadmap.id !== roadmap.id,
-      ),
-    );
+
+    const { error } = await supabase
+      .from("Roadmap")
+      .delete()
+      .eq("id", roadmap.id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
     setOpenMenuRoadmapId(null);
+    getRoadmaps();
   }, []);
 
   async function onSignOut() {
@@ -177,7 +192,7 @@ export default function Dashboard() {
                   {roadmap.description}
                 </p>
                 <p className="mt-2 text-xs text-slate-500">
-                  {roadmap.nodes.length} nodos
+                  {roadmap.SkillNode[0]?.count ?? 0} nodos
                 </p>
               </div>
             ))}
