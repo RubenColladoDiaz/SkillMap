@@ -8,87 +8,27 @@ import {
   addEdge,
   NodeMouseHandler,
   useReactFlow,
+  Node,
+  Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Difficulty, SkillNode, SkillNodeStatus } from "../types/SkillNode";
+import { Difficulty, SkillNodeStatus } from "../types/SkillNode";
 import UpdaterNode from "../flow/nodes/UpdaterNode";
 import EditNode from "../components/nodes/EditNode";
 import ProgressBar from "../components/ProgressBar";
-import { Roadmap } from "../types/Roadmap";
 import Link from "next/link";
-
-const nodeStructures: SkillNode[] = [
-  {
-    id: "n1",
-    title: "React Basics",
-    description: "Learn the basics",
-    status: SkillNodeStatus.PENDING,
-    category: "Tech",
-    difficulty: Difficulty.EASY,
-    dependsOn: [],
-    x: 0,
-    y: 180,
-  },
-  {
-    id: "n2",
-    title: "Hooks",
-    description: "Learn the React Hooks",
-    status: SkillNodeStatus.IN_PROGRESS,
-    category: "Tech",
-    difficulty: Difficulty.NORMAL,
-    dependsOn: ["n1"],
-    x: 50,
-    y: 280,
-  },
-  {
-    id: "n3",
-    title: "Events",
-    description: "Learn the React Events",
-    status: SkillNodeStatus.FINISHED,
-    category: "Tech",
-    difficulty: Difficulty.HARD,
-    dependsOn: ["n2"],
-    x: 100,
-    y: 380,
-  },
-];
-
-const initialNodes = getNodes(nodeStructures);
-const initialEdges = getEdges(nodeStructures);
+import { createClient } from "../../../utils/supabase/client";
 
 const nodeTypes = {
   updaterNode: UpdaterNode,
 };
 
-function getNodes(nodes: SkillNode[]) {
-  return nodes.map((node) => ({
-    id: node.id,
-    type: "updaterNode",
-    position: { x: node.x, y: node.y },
-    data: {
-      status: node.status,
-      title: node.title,
-      description: node.description,
-      category: node.category,
-      difficulty: node.difficulty,
-    },
-  }));
-}
-function getEdges(nodes: SkillNode[]) {
-  return nodes.flatMap((node) =>
-    node.dependsOn.map((dependencyId) => ({
-      id: `${dependencyId}-${node.id}`,
-      source: dependencyId,
-      target: node.id,
-    })),
-  );
-}
-
 export default function Canvas({ roadmapId }: { roadmapId: string }) {
   const { screenToFlowPosition } = useReactFlow();
+  const supabase = createClient();
 
-  const [nodes, setNodes] = useState(() => initialNodes);
-  const [edges, setEdges] = useState(() => initialEdges);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [contextualMenuPosition, setContextualMenuPosition] = useState<{
     x: number;
@@ -100,7 +40,45 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
   } | null>(null);
   const [nodeIdToDelete, setNodeIdToDelete] = useState<string | null>(null);
 
-  const [hasLoaded, setHasLoaded] = useState(false);
+  async function getNodesFromRoadmap(roadmapId: string) {
+    const { data: nodeRows, error } = await supabase
+      .from("SkillNode")
+      .select("*")
+      .eq("roadmap_id", roadmapId);
+
+    if (error) {
+      console.error(error);
+      return [];
+    }
+
+    setNodes(
+      nodeRows.map((node) => ({
+        id: node.id,
+        type: "updaterNode",
+        position: { x: node.position_x, y: node.position_y },
+        data: {
+          title: node.title,
+          description: node.description,
+          category: node.category,
+          status: node.status,
+          difficulty: node.difficulty,
+        },
+      })),
+    );
+  }
+  async function getEdgesFromRoadmap(roadmapId: string) {
+    const { data: edgeRows, error } = await supabase
+      .from("Edges")
+      .select("*")
+      .eq("roadmap_id", roadmapId);
+
+    if (error) {
+      console.error(error);
+      return [];
+    }
+
+    setEdges(edgeRows);
+  }
 
   function getProgress() {
     if (nodes.length <= 0) return 0;
@@ -115,25 +93,31 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
 
   // Efecto de carga
   useEffect(() => {
-    if (localStorage.getItem("roadmaps") !== null) {
-      const roadmaps: Roadmap[] = JSON.parse(
-        localStorage.getItem("roadmaps") ?? "",
-      );
-      const actualRoadmap = roadmaps.find(
-        (roadmap) => roadmap.id === roadmapId,
-      );
-      if (actualRoadmap) {
-        setNodes(actualRoadmap.nodes);
-        setEdges(actualRoadmap.edges);
-      }
-    }
-    setHasLoaded(true);
-  }, [roadmapId]);
+    getNodesFromRoadmap(roadmapId);
+    getEdgesFromRoadmap(roadmapId);
+  }, []);
 
   const onNodesChange = useCallback(
     (changes) =>
       setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
     [],
+  );
+  const onNodeDragStop = useCallback(
+    async (event, node: Node) => {
+      const { error: errorMoving } = await supabase
+        .from("SkillNode")
+        .update({
+          position_x: node.position.x,
+          position_y: node.position.y,
+        })
+        .eq("id", node.id);
+
+      if (errorMoving) {
+        console.error(JSON.stringify(errorMoving, null, 2));
+        return;
+      }
+    },
+    [supabase],
   );
   const onEdgesChange = useCallback(
     (changes) =>
@@ -141,8 +125,25 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
     [],
   );
   const onConnect = useCallback(
-    (params) => setEdges((edgesSnapshot) => addEdge(params, edgesSnapshot)),
-    [],
+    async (params) => {
+      const { data: connecting, error: errorConnecting } = await supabase
+        .from("Edges")
+        .insert({
+          roadmap_id: roadmapId,
+          source: params.source,
+          target: params.target,
+        })
+        .select()
+        .single();
+
+      if (errorConnecting) {
+        console.error(JSON.stringify(errorConnecting, null, 2));
+        return;
+      }
+
+      setEdges((edgesSnapshot) => addEdge(connecting, edgesSnapshot));
+    },
+    [supabase, roadmapId],
   );
   const onNodeClick: NodeMouseHandler = (event, node) => {
     setSelectedNodeId(node.id);
@@ -174,7 +175,7 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
 
   const onCloseEditPanel = () => setSelectedNodeId(null);
 
-  const onSaveEditPanel = (
+  const onSaveEditPanel = async (
     id: string,
     data: {
       title: string;
@@ -184,6 +185,22 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
       difficulty: Difficulty;
     },
   ) => {
+    const { error: editedNodeError } = await supabase
+      .from("SkillNode")
+      .update({
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        status: data.status,
+        difficulty: data.difficulty,
+      })
+      .eq("id", id);
+
+    if (editedNodeError) {
+      console.error(JSON.stringify(editedNodeError, null, 2));
+      return;
+    }
+
     setNodes(
       nodes.map((node) =>
         node.id === id ? { ...node, data: { ...node.data, ...data } } : node,
@@ -191,44 +208,58 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
     );
   };
 
-  // Efecto de guardado
-  useEffect(() => {
-    if (!hasLoaded) return;
-
-    if (localStorage.getItem("roadmaps") !== null) {
-      const roadmaps: Roadmap[] = JSON.parse(
-        localStorage.getItem("roadmaps") ?? "",
-      );
-      const updatedRoadmaps = roadmaps.map((roadmap) =>
-        roadmap.id === roadmapId
-          ? { ...roadmap, nodes: nodes, edges: edges }
-          : roadmap,
-      );
-      localStorage.setItem("roadmaps", JSON.stringify(updatedRoadmaps));
-    }
-  }, [edges, hasLoaded, nodes, roadmapId]);
-
-  function createNode() {
+  async function createNode() {
     if (!flowPosition) return;
 
-    const uniqueId = crypto.randomUUID();
-    const newNode = {
-      id: uniqueId,
-      data: {
+    const { data: newNode, error: newNodeError } = await supabase
+      .from("SkillNode")
+      .insert({
+        roadmap_id: roadmapId,
+        position_x: flowPosition.x,
+        position_y: flowPosition.y,
         title: "Sin titulo",
         description: "",
         category: "",
         status: SkillNodeStatus.PENDING,
         difficulty: Difficulty.NORMAL,
-      },
-      position: flowPosition,
+      })
+      .select()
+      .single();
+
+    if (newNodeError || !newNode) {
+      console.log(JSON.stringify(newNodeError, null, 2));
+      return;
+    }
+
+    const convertedNode = {
+      id: newNode.id,
       type: "updaterNode",
+      position: { x: newNode.position_x, y: newNode.position_y },
+      data: {
+        title: newNode.title,
+        description: newNode.description,
+        category: newNode.category,
+        status: newNode.status,
+        difficulty: newNode.difficulty,
+      },
     };
-    setNodes((nodes) => [...nodes, newNode]);
+
+    setNodes((nodes) => [...nodes, convertedNode]);
     setContextualMenuPosition(null);
-    setSelectedNodeId(uniqueId);
+    setSelectedNodeId(convertedNode.id);
   }
-  function deleteNode() {
+
+  async function deleteNode() {
+    const { error: errorDeleting } = await supabase
+      .from("SkillNode")
+      .delete()
+      .eq("id", nodeIdToDelete);
+
+    if (errorDeleting) {
+      console.log(JSON.stringify(errorDeleting, null, 2));
+      return;
+    }
+
     setNodes((currentNodes) =>
       currentNodes.filter((node) => node.id !== nodeIdToDelete),
     );
@@ -279,12 +310,14 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
         edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
+        onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onNodeContextMenu={onNodeContextMenu}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneContextMenu={onPaneContextMenu}
         onPaneClick={onPaneClick}
+        deleteKeyCode={null}
         fitView
       />
     </div>

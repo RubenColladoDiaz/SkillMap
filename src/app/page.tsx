@@ -5,6 +5,7 @@ import { Roadmap } from "./types/Roadmap";
 import EditRoadmap from "./components/roadmaps/EditRoadmap";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
+import { SkillNode, SkillNodeStatus, Difficulty } from "./types/SkillNode";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -18,6 +19,42 @@ export default function Dashboard() {
   const [openMenuRoadmapId, setOpenMenuRoadmapId] = useState<string | null>(
     null,
   );
+
+  const startNodes: SkillNode[] = [
+    {
+      id: "n1",
+      title: "React Basics",
+      description: "Learn the basics",
+      status: SkillNodeStatus.PENDING,
+      category: "Tech",
+      difficulty: Difficulty.EASY,
+      dependsOn: [],
+      x: 0,
+      y: 180,
+    },
+    {
+      id: "n2",
+      title: "Hooks",
+      description: "Learn the React Hooks",
+      status: SkillNodeStatus.IN_PROGRESS,
+      category: "Tech",
+      difficulty: Difficulty.NORMAL,
+      dependsOn: ["n1"],
+      x: 50,
+      y: 280,
+    },
+    {
+      id: "n3",
+      title: "Events",
+      description: "Learn the React Events",
+      status: SkillNodeStatus.FINISHED,
+      category: "Tech",
+      difficulty: Difficulty.HARD,
+      dependsOn: ["n2"],
+      x: 100,
+      y: 380,
+    },
+  ];
 
   async function getRoadmaps() {
     const { data, error } = await supabase
@@ -70,10 +107,51 @@ export default function Dashboard() {
         })
         .select()
         .single();
+
       if (error || !insertedRoadmap) {
         console.error(error);
         return;
       }
+
+      const { data: insertedNodes, error: nodesError } = await supabase
+        .from("SkillNode")
+        .insert(
+          startNodes.map((node) => ({
+            roadmap_id: insertedRoadmap.id,
+            position_x: node.x,
+            position_y: node.y,
+            title: node.title,
+            description: node.description,
+            category: node.category,
+            status: node.status,
+            difficulty: node.difficulty,
+          })),
+        )
+        .select();
+
+      if (nodesError || !insertedNodes) {
+        console.error(nodesError);
+        return;
+      }
+
+      const { error: edgesError } = await supabase.from("Edges").insert([
+        {
+          roadmap_id: insertedRoadmap.id,
+          source: insertedNodes[0].id,
+          target: insertedNodes[1].id,
+        },
+        {
+          roadmap_id: insertedRoadmap.id,
+          source: insertedNodes[1].id,
+          target: insertedNodes[2].id,
+        },
+      ]);
+
+      if (edgesError) {
+        console.error(JSON.stringify(edgesError, null, 2));
+        return;
+      }
+
       setIsCreatePanelOpen(false);
       router.push("/roadmaps/" + insertedRoadmap.id);
     }
