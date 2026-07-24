@@ -272,6 +272,24 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
     setContextualMenuPosition(null);
   }
 
+  function exportAsJson() {
+    const combinedData = { nodes, edges };
+    const combinedText = JSON.stringify(combinedData);
+
+    const blob = new Blob([combinedText], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "roadmap.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <Link
@@ -280,6 +298,12 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
       >
         ← Volver
       </Link>
+      <button
+        onClick={exportAsJson}
+        className="fixed top-4 right-4 z-40 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
+      >
+        Exportar JSON
+      </button>
       {selectedNodeId !== null && (
         <EditNode
           node={selectedNode}
