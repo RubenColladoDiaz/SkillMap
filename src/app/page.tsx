@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Roadmap } from "./types/Roadmap";
-import EditRoadmap from "./components/roadmaps/EditRoadmap";
+import EditRoadmap from "./components/Dashboard/roadmaps/EditRoadmap";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../utils/supabase/client";
 import { SkillNode, SkillNodeStatus, Difficulty } from "./types/SkillNode";
+import RoadmapCard from "./components/Dashboard/roadmaps/RoadmapCard";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -238,41 +239,14 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
             {roadmaps.map((roadmap) => (
-              <div
+              <RoadmapCard
                 key={roadmap.id}
-                onClick={() => router.push(`/roadmaps/${roadmap.id}`)}
-                className="relative cursor-pointer rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-lg transition hover:border-emerald-400 hover:shadow-emerald-500/10"
-              >
-                <button
-                  onClick={(event) => toggleRoadmapMenu(event, roadmap)}
-                  className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-slate-800 hover:text-white"
-                >
-                  ⋮
-                </button>
-                {openMenuRoadmapId === roadmap.id && (
-                  <div className="absolute top-10 right-3 z-10 w-32 rounded-lg border border-slate-700 bg-slate-800 p-1 shadow-xl">
-                    <button
-                      onClick={(event) => editRoadmap(event, roadmap)}
-                      className="w-full rounded-md px-3 py-1.5 text-left text-sm text-slate-200 hover:bg-slate-700"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={(event) => deleteRoadmap(event, roadmap)}
-                      className="w-full rounded-md px-3 py-1.5 text-left text-sm text-red-400 hover:bg-slate-700"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                )}
-                <p className="pr-6 font-semibold text-white">{roadmap.name}</p>
-                <p className="mt-1 text-xs text-slate-400 line-clamp-2">
-                  {roadmap.description}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {roadmap.SkillNode[0]?.count ?? 0} nodos
-                </p>
-              </div>
+                roadmap={roadmap}
+                openMenuRoadmapId={openMenuRoadmapId}
+                toggleRoadmapMenu={toggleRoadmapMenu}
+                editRoadmap={editRoadmap}
+                deleteRoadmap={deleteRoadmap}
+              ></RoadmapCard>
             ))}
           </div>
         )}

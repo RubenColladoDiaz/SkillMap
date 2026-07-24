@@ -15,11 +15,12 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Difficulty, SkillNodeStatus } from "../types/SkillNode";
 import UpdaterNode from "../flow/nodes/UpdaterNode";
-import EditNode from "../components/nodes/EditNode";
-import ProgressBar from "../components/ProgressBar";
-import Link from "next/link";
+import EditNode from "../components/Canvas/nodes/EditNode";
+import ProgressBar from "../components/Canvas/ProgressBar";
 import { createClient } from "../../../utils/supabase/client";
 import { toPng } from "html-to-image";
+import ContextualMenu from "../components/Canvas/ContextualMenu";
+import TopButtons from "../components/Canvas/TopButtons";
 
 const nodeTypes = {
   updaterNode: UpdaterNode,
@@ -325,26 +326,10 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
-      <Link
-        href="/"
-        className="fixed top-4 left-4 z-40 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
-      >
-        ← Volver
-      </Link>
-      <div className="fixed top-4 right-4 z-40 flex gap-2">
-        <button
-          onClick={exportAsJson}
-          className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
-        >
-          Exportar JSON
-        </button>
-        <button
-          onClick={exportAsImage}
-          className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
-        >
-          Exportar imagen
-        </button>
-      </div>
+      <TopButtons
+        exportAsJson={exportAsJson}
+        exportAsImage={exportAsImage}
+      ></TopButtons>
       {selectedNodeId !== null && (
         <EditNode
           node={selectedNode}
@@ -353,21 +338,13 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
         ></EditNode>
       )}
       {contextualMenuPosition !== null && (
-        <div
-          style={{
-            position: "fixed",
-            left: contextualMenuPosition.x,
-            top: contextualMenuPosition.y,
-          }}
-          className="z-50 rounded-lg border border-slate-700 bg-slate-900 p-1 shadow-xl"
-        >
-          <button
-            onClick={nodeIdToDelete !== null ? deleteNode : createNode}
-            className="rounded-md px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
-          >
-            {nodeIdToDelete !== null ? "Eliminar" : "Crear nodo"}
-          </button>
-        </div>
+        <ContextualMenu
+          x={contextualMenuPosition.x}
+          y={contextualMenuPosition.y}
+          nodeIdToDelete={nodeIdToDelete}
+          deleteNode={deleteNode}
+          createNode={createNode}
+        ></ContextualMenu>
       )}
       <ProgressBar percentage={progressPercentage}></ProgressBar>
       <ReactFlow
