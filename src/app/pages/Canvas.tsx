@@ -10,6 +10,7 @@ import {
   useReactFlow,
   Node,
   Edge,
+  getViewportForBounds,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Difficulty, SkillNodeStatus } from "../types/SkillNode";
@@ -18,13 +19,14 @@ import EditNode from "../components/nodes/EditNode";
 import ProgressBar from "../components/ProgressBar";
 import Link from "next/link";
 import { createClient } from "../../../utils/supabase/client";
+import { toPng } from "html-to-image";
 
 const nodeTypes = {
   updaterNode: UpdaterNode,
 };
 
 export default function Canvas({ roadmapId }: { roadmapId: string }) {
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNodesBounds } = useReactFlow();
   const supabase = createClient();
 
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -290,6 +292,37 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
     URL.revokeObjectURL(url);
   }
 
+  async function exportAsImage() {
+    const nodesRectangle = getNodesBounds(nodes);
+    const viewport = getViewportForBounds(
+      nodesRectangle,
+      1024,
+      768,
+      0.5,
+      2,
+      0.2,
+    );
+
+    const dataUrl = await toPng(
+      document.querySelector(".react-flow__viewport") as HTMLElement,
+      {
+        width: 1024,
+        height: 768,
+        style: {
+          width: "1024px",
+          height: "768px",
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+        },
+      },
+    );
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = "roadmap.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <Link
@@ -298,12 +331,20 @@ export default function Canvas({ roadmapId }: { roadmapId: string }) {
       >
         ← Volver
       </Link>
-      <button
-        onClick={exportAsJson}
-        className="fixed top-4 right-4 z-40 rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
-      >
-        Exportar JSON
-      </button>
+      <div className="fixed top-4 right-4 z-40 flex gap-2">
+        <button
+          onClick={exportAsJson}
+          className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
+        >
+          Exportar JSON
+        </button>
+        <button
+          onClick={exportAsImage}
+          className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-medium text-slate-300 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white"
+        >
+          Exportar imagen
+        </button>
+      </div>
       {selectedNodeId !== null && (
         <EditNode
           node={selectedNode}
